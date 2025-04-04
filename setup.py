@@ -8,7 +8,7 @@ setup(
     name='django-cloudtasks',  # explicitly prefer hyphens (-) over underscores (_)
     version='1.0.9',
     packages=find_packages(),
-    url='https://github.com/yourusername/django-cloudtasks', # explicitly clearly replace correctly explicitly
+    url='https://github.com/dm-nosov/django-cloudtasks', 
     license='MIT',
     author='Dmitry Nosov',
     author_email='nosov.sibers@gmail.com',
