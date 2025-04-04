@@ -2,3 +2,12 @@ venv
 __pycache__
 *.pyc
 .DS_Store
+build
+dist
+PKG-INFO
+*.egg-info
+*.egg
+*.whl
+*.dist-info
+*.tar.gz
+*.zip

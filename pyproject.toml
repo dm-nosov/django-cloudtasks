@@ -1,0 +1,2 @@
+[tool.poetry]
+name = "django-gcp-cloudtasks" 

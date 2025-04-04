@@ -5,7 +5,7 @@ this_directory = Path(__file__).parent
 long_description = (this_directory / "README.md").read_text(encoding='utf-8')
 
 setup(
-    name='django-cloudtasks',  # explicitly prefer hyphens (-) over underscores (_)
+    name='django-gcp-cloudtasks',  # Updated package name
     version='1.0.9',
     packages=find_packages(),
     url='https://github.com/dm-nosov/django-cloudtasks', 
