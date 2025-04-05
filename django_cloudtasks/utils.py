@@ -93,6 +93,14 @@ def revoke_task(task_id):
         task.status = TaskStatus.REVOKED
         task.save()
         logger.info(f"Marked task {task.id} as REVOKED.")
+        
+        # Explicitly update Chain status:
+        chain = task.chain
+        if chain.status not in [ChainStatus.FAILED, ChainStatus.SUCCESS]:
+            chain.status = ChainStatus.FAILED
+            chain.save()
+            logger.info(f"Chain {chain.id} marked as FAILED due to task revocation.")
+
         return True
 
     except CloudTask.DoesNotExist:

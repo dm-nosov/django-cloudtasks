@@ -1,4 +1,4 @@
-# django-gcp-cloudtasks
+# README.md
 
 ## Django Cloud Tasks
 
@@ -19,7 +19,9 @@ A Django library for managing asynchronous tasks and complex workflows, built on
 
 ---
 
-## Installation
+## Installation and Setup
+
+### Requirements  
 
 ```bash
 pip install django-gcp-cloudtasks
@@ -52,9 +54,61 @@ INSTALLED_APPS = [
 Apply migrations:
 
 ```bash
-python manage.py makemigrations django_cloudtasks
 python manage.py migrate django_cloudtasks
 ```
+
+### URL Configuration
+
+Add the following to your project's `urls.py`:
+
+```python
+from django.urls import path, include
+
+urlpatterns = [
+    ...
+    path('cloudtasks/', include('django_cloudtasks.urls')),
+    ...
+]
+```
+
+This will register all the necessary endpoints for task execution, tracking, and revocation.
+
+
+
+### Create a Service Account 
+
+1. **Create a Service Account**:
+```bash
+gcloud iam service-accounts create my-service-account \
+    --display-name="My Service Account"
+```
+
+2. **Grant Roles to the Service Account**:
+   - Grant permissions to interact with Cloud Tasks and other necessary services.
+
+```bash
+gcloud projects add-iam-policy-binding test-project-455815 \
+    --member="serviceAccount:my-service-account@test-project-455815.iam.gserviceaccount.com" \
+    --role="roles/cloudtasks.enqueuer"
+```
+
+   - You may need additional roles depending on your use case, e.g., `roles/cloudtasks.viewer`.
+
+3. **Generate a Key for the Service Account**:
+```bash
+gcloud iam service-accounts keys create ~/path/to/key.json \
+    --iam-account=my-service-account@test-project-455815.iam.gserviceaccount.com
+```
+
+### Set Up Environment Variable
+
+Set the `GOOGLE_APPLICATION_CREDENTIALS` environment variable to the path of your service account key file:
+
+```bash
+export GOOGLE_APPLICATION_CREDENTIALS="~/path/to/key.json"
+```
+
+
 
 ---
 
@@ -150,6 +204,51 @@ chain_mgr.add_task(
 chain_mgr.run()
 ```
 
+#### Error Handler Parameters
+
+Error handlers must accept the following parameters:
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `original_task_id` | UUID | The unique identifier of the task that failed |
+| `original_task_name` | str | The name/endpoint of the task that failed |
+| `error` | str | String representation of the exception that occurred |
+| `payload` | dict | The original payload sent to the task that failed |
+
+### CloudChainManager Structure
+
+The `CloudChainManager` class provides properties and methods to access task and chain IDs for monitoring, debugging, or revocation:
+
+```python
+from django_cloudtasks.manager import CloudChainManager
+
+# Create a chain manager
+chain_mgr = CloudChainManager()
+chain_mgr.add_task("task1", {"a": 1})
+chain_mgr.add_task("task2", {"b": 2})
+
+# Access chain ID for revocation
+chain_id = chain_mgr.chain.id  # UUID of the entire chain
+print(f"Chain ID: {chain_id}")
+
+# Access the last added task's ID
+last_task_id = chain_mgr.last_task.id  # UUID of the most recently added task
+print(f"Last Task ID: {last_task_id}")
+
+# Get all tasks in the chain
+all_tasks = chain_mgr.chain.tasks.all()
+for task in all_tasks:
+    print(f"Task ID: {task.id}, Endpoint: {task.endpoint_path}")
+
+# Revoke the chain
+from django_cloudtasks.utils import revoke_chain
+revoke_chain(chain_id)
+
+# Revoke a specific task
+from django_cloudtasks.utils import revoke_task
+revoke_task(last_task_id)
+```
+
 ### Chaining and Grouping Chains
 
 Automatically schedule another task if any error occurs:
@@ -190,20 +289,3 @@ GET /cloudtasks/revoke/?chain=<CHAIN_ID>
 | `/cloudtasks/run/<task_name>/` | POST | Execute a registered task (Cloud Tasks entrypoint) |
 | `/cloudtasks/tracker/` | POST | Receive results and control flow after tasks execution |
 | `/cloudtasks/revoke/` | GET | Revoke specific tasks or entire chains |
-
----
-
-## Structure & further implementation (our files plan)
-
-```
-django_cloudtasks/
-├── README.md (this file)
-├── __init__.py
-├── constants.py
-├── models.py
-├── manager.py
-├── decorators.py
-├── views.py
-├── urls.py
-└── utils.py
-```

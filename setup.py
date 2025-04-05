@@ -6,7 +6,7 @@ long_description = (this_directory / "README.md").read_text(encoding='utf-8')
 
 setup(
     name='django-gcp-cloudtasks',  # Updated package name
-    version='1.0.9',
+    version='1.2.0',
     packages=find_packages(),
     url='https://github.com/dm-nosov/django-cloudtasks', 
     license='MIT',

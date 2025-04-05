@@ -137,7 +137,7 @@ def tracker_view(request):
                         inject_result_into_next_task(group.next_task, group.execution_result)
                         schedule_cloud_task(group.next_task)
 
-                elif any(c.status == TaskStatus.FAILED for c in children):
+                elif any(c.status in [TaskStatus.FAILED, TaskStatus.REVOKED] for c in children):
                     group.status = TaskStatus.FAILED
                     group.save()
 
@@ -173,6 +173,11 @@ def tracker_view(request):
                     chain.save()
                     chain_updated = True
 
+            # Explicitly trigger child chains DOWNWARD first
+            if chain_updated and chain.status == ChainStatus.SUCCESS:
+                # ✨ Explicitly trigger subchains (next chains) after this chain succeeded clearly:
+                trigger_subchain(chain, previous_result=chain.result)
+                
             # STEP 5: Propagate upwards recursively (chains-of-chains only at completion):
             if chain_updated and chain.parent_chain:
                 trigger_parent_chain_check(chain.parent_chain)
