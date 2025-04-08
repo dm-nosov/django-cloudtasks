@@ -6,7 +6,7 @@ long_description = (this_directory / "README.md").read_text(encoding='utf-8')
 
 setup(
     name='django-gcp-cloudtasks',  # Updated package name
-    version='1.2.0',
+    version='1.5.0',
     packages=find_packages(),
     url='https://github.com/dm-nosov/django-cloudtasks', 
     license='MIT',
@@ -24,7 +24,6 @@ setup(
         "Environment :: Web Environment",
         "Framework :: Django",
         "Intended Audience :: Developers",
-        "License :: OSI Approved :: MIT License",
         "Programming Language :: Python :: 3 :: Only",
         "Programming Language :: Python :: 3.9",
         "Programming Language :: Python :: 3.10",

@@ -118,9 +118,10 @@ def tracker_view(request):
             task.save()
 
             # STEP 2: Immediately schedule next child tasks (sequential execution):
-            for child in task.children.filter(status=TaskStatus.PENDING, is_group=False):
-                inject_result_into_next_task(child, task.execution_result)
-                schedule_cloud_task(child)
+            if task.status == TaskStatus.SUCCESS:
+                for child in task.children.filter(status=TaskStatus.PENDING):
+                    inject_result_into_next_task(child, task.execution_result)
+                    schedule_cloud_task(child)
 
             # STEP 3: Explicitly handle group (parallel tasks):
             if task.parent and task.parent.is_group:
