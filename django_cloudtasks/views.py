@@ -26,7 +26,7 @@ def task_dispatcher(request, task_name):
 
     # CLEARLY LOG ALL HEADERS
     headers = dict(request.headers)
-    logger.info(f"☑️ All incoming headers clearly logged for debugging: {headers}")
+    logger.debug(f"☑️ All incoming headers clearly logged for debugging: {headers}")
 
     execution_count = int(request.headers.get('X-CloudTasks-TaskExecutionCount', '0'))
     retry_count = int(request.headers.get('X-CloudTasks-TaskRetryCount', '0'))
@@ -39,6 +39,8 @@ def task_dispatcher(request, task_name):
 
     data = json.loads(request.body)
     task_id = data.get("_task_id")
+
+    logger.info(f"TASKS_REGISTRY: {TASKS_REGISTRY}")
 
     if task_name not in TASKS_REGISTRY:
         return JsonResponse({"error": f"No task '{task_name}' registered."}, status=404)

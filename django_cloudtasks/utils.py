@@ -15,6 +15,11 @@ def inject_result_into_next_task(task, result):
         logger.warning(f"No result to inject into task {task.id}. Skipping injection.")
         return
 
+    if task.is_group:
+        task.execution_result = result
+        task.save()
+        return
+
     endpoint = task.endpoint_path.strip("/").split("/")[-1]
     task_meta = TASKS_REGISTRY.get(endpoint)
 
@@ -42,6 +47,7 @@ def schedule_cloud_task(task):
             logger.warning(f"Group task {task.id} has no child tasks to schedule.")
             return
         for child in child_tasks:
+            inject_result_into_next_task(child, task.execution_result)
             schedule_cloud_task(child)
         task.status = TaskStatus.SCHEDULED
         task.save()
@@ -77,6 +83,7 @@ def schedule_cloud_task(task):
     task.status = TaskStatus.SCHEDULED
     task.save()
     logger.info(f"Scheduled task {task.id}: Cloud Task Name = {response.name}")
+    logger.info("Task body: %s", task_body)
 
 
 def revoke_task(task_id):
