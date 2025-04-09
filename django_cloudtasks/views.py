@@ -9,7 +9,7 @@ from django.views.decorators.csrf import csrf_exempt
 from django.urls import reverse
 from django.db import transaction
 
-from django_cloudtasks.constants import AUTH_TOKEN, CLOUD_RUN_URL, MAX_TASK_RETRIES, ChainStatus, TaskStatus
+from django_cloudtasks.constants import AUTH_TOKEN, CLOUD_RUN_URL, MAX_TASK_RETRIES, DEBUG_MODE, ChainStatus, TaskStatus
 
 from .models import CloudChain, CloudTask, TaskStatus
 from .decorators import authenticate_task, TASKS_REGISTRY
@@ -79,6 +79,33 @@ def report_task_results(task_id, result=None, error=None):
     """
     Report task status back to internal tracker endpoint.
     """
+    # In DEBUG mode, call tracker_view directly
+    if DEBUG_MODE:
+        logger.info(f"DEBUG MODE: Directly processing task {task_id} results")
+        payload = {"_task_id": task_id}
+        if error:
+            payload["_error"] = error
+        else:
+            payload["_result"] = result
+            
+        from django.http import HttpRequest
+        
+        # Create a fake request for the tracker view
+        request = HttpRequest()
+        request.method = "POST"
+        request.META["CONTENT_TYPE"] = "application/json"
+        request.META["HTTP_AUTHORIZATION"] = f"Bearer {AUTH_TOKEN}"
+        # Set body content
+        payload_bytes = json.dumps(payload).encode('utf-8')
+        request._body = payload_bytes
+        # Mock the original json.loads call by providing the data directly
+        setattr(request, '_debug_data', payload)
+        
+        # Call tracker directly
+        tracker_view(request)
+        return
+    
+    # Regular HTTP call for non-debug mode
     tracker_url = reverse('cloudtasks_tracker')
     headers = {"Authorization": f"Bearer {AUTH_TOKEN}"}
     payload = {"_task_id": task_id}
@@ -100,7 +127,12 @@ def tracker_view(request):
     if request.method != "POST":
         return JsonResponse({"error": "POST required"}, status=405)
 
-    data = json.loads(request.body)
+    # Handle both regular requests and DEBUG mode requests
+    if DEBUG_MODE and hasattr(request, '_debug_data'):
+        data = request._debug_data
+    else:
+        data = json.loads(request.body)
+        
     task_id = data.get("_task_id")
     task_result = data.get("_result")
     task_error = data.get("_error")

@@ -16,6 +16,7 @@ A Django library for managing asynchronous tasks and complex workflows, built on
 - **Error Callbacks**: Define handlers for unexpected errors.
 - **Result Injection**: Automatically passes previous outputs into next tasks.
 - **Revocation**: Dynamically cancel executing or future tasks.
+- **Debug Mode**: Execute tasks synchronously for local development without cloud services.
 
 ---
 
@@ -37,6 +38,7 @@ TASKAPP_GCP_LOCATION=us-central1
 TASKAPP_GCP_QUEUE=default
 TASKAPP_CLOUD_RUN_URL=https://YOUR_CLOUD_RUN_ENDPOINT
 TASKAPP_AUTH_TOKEN=YOUR_SECURE_AUTH_TOKEN
+TASKAPP_DEBUG_MODE=False  # Set to 'True' for local development/testing
 ```
 
 ### Django settings
@@ -289,3 +291,28 @@ GET /cloudtasks/revoke/?chain=<CHAIN_ID>
 | `/cloudtasks/run/<task_name>/` | POST | Execute a registered task (Cloud Tasks entrypoint) |
 | `/cloudtasks/tracker/` | POST | Receive results and control flow after tasks execution |
 | `/cloudtasks/revoke/` | GET | Revoke specific tasks or entire chains |
+
+---
+
+## Debug Mode
+
+The library provides a DEBUG mode for local development and testing without requiring actual Google Cloud Tasks infrastructure.
+
+### How to Enable Debug Mode
+
+Set the environment variable:
+```env
+TASKAPP_DEBUG_MODE=True
+```
+
+### Debug Mode Behavior
+
+When DEBUG mode is enabled:
+
+1. Tasks are executed synchronously, one after another
+2. No HTTP requests are made to Google Cloud Tasks
+3. Task results and errors are processed locally
+4. All chain, group, and task relationships work exactly as they would in production
+5. Perfect for unit testing and local development without internet connection
+
+This allows you to test complex task chains without needing to set up Cloud Tasks queues or deal with authentication in your development environment.

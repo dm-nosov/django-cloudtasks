@@ -1,5 +1,5 @@
 import logging
-from django_cloudtasks.constants import PROJECT_ID, LOCATION_ID, QUEUE_ID, CLOUD_RUN_URL, AUTH_TOKEN, ChainStatus, TaskStatus
+from django_cloudtasks.constants import PROJECT_ID, LOCATION_ID, QUEUE_ID, CLOUD_RUN_URL, AUTH_TOKEN, DEBUG_MODE, ChainStatus, TaskStatus
 from django_cloudtasks.decorators import TASKS_REGISTRY
 from django_cloudtasks.models import CloudChain, CloudTask
 import datetime
@@ -54,7 +54,46 @@ def schedule_cloud_task(task):
         logger.info(f"Scheduled all children tasks inside group {task.id}.")
         return
 
-    # existing scheduling logic follows (unchanged):
+    # DEBUG MODE: Execute task synchronously
+    if DEBUG_MODE:
+        logger.info(f"DEBUG MODE: Executing task {task.id} synchronously")
+        payload = task.payload.copy()
+        payload['_task_id'] = str(task.id)
+        
+        # Extract task name from endpoint path
+        endpoint = task.endpoint_path.strip("/").split("/")[-1]
+        task_meta = TASKS_REGISTRY.get(endpoint)
+        
+        if not task_meta:
+            logger.error(f"Task logic '{endpoint}' not found in TASKS_REGISTRY.")
+            return
+            
+        try:
+            # Execute task function with payload params
+            kwargs = {k: payload[k] for k in task_meta["param_names"] if k in payload}
+            result = task_meta['func'](**kwargs)
+            
+            # Directly call report_task_results (reusing existing logic)
+            from django_cloudtasks.views import report_task_results
+            report_task_results(str(task.id), result=result)
+            
+            logger.info(f"DEBUG MODE: Successfully executed task {task.id}")
+            return
+        except Exception as ex:
+            logger.exception(f"DEBUG MODE: Task {task.id} execution error: {ex}")
+            
+            # Execute error callback if defined (simulating max retries exceeded)
+            if '_error_callback' in task.payload:
+                error_callback_name = task.payload.get('_error_callback')
+                logger.info(f"DEBUG MODE: Executing error callback '{error_callback_name}' for task {task.id}")
+                run_error_callback(str(task.id), endpoint, kwargs, ex)
+            
+            # Report error using existing mechanism
+            from django_cloudtasks.views import report_task_results
+            report_task_results(str(task.id), error=str(ex))
+            return
+
+    # Regular Cloud Tasks execution (unchanged):
     client = tasks_v2.CloudTasksClient()
     queue_path = client.queue_path(PROJECT_ID, LOCATION_ID, QUEUE_ID)
 
